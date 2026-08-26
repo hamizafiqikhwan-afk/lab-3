@@ -396,6 +396,7 @@ else:
 
                     m = folium.Map(location=[center_lat, center_lon], zoom_start=zoom_level, max_zoom=22, tiles=None)
 
+                    # --- GOOGLE MAP TILE LAYERS ---
                     folium.TileLayer(
                         tiles='https://mt1.google.com/vt/lyrs=s&x={x}&y={y}&z={z}',
                         attr='Google',
@@ -423,6 +424,17 @@ else:
                         max_zoom=22
                     ).add_to(m)
 
+                    # --- ESRI SATELLITE TILE LAYER ---
+                    folium.TileLayer(
+                        tiles='https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+                        attr='Esri World Imagery',
+                        name='Esri Satellite',
+                        overlay=False,
+                        control=True,
+                        max_zoom=50
+                    ).add_to(m)
+
+                    # --- OPENSTREETMAP ---
                     folium.TileLayer(
                         tiles='OpenStreetMap',
                         name='OpenStreetMap',
