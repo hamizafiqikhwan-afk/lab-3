@@ -244,8 +244,8 @@ else:
                     c1, c2, c3, c4 = st.columns(4)
                     show_cad_polygon = c1.checkbox("Poligon", value=True, key="cad_poly")
                     show_cad_points = c2.checkbox("Stesen (STN)", value=True, key="cad_pts")
-                    show_cad_bearing = c3.checkbox("Bearing", value=False, key="cad_bear")
-                    show_cad_distance = c4.checkbox("Jarak", value=False, key="cad_dist")
+                    show_cad_bearing = c3.checkbox("Bearing", value=True, key="cad_bear")
+                    show_cad_distance = c4.checkbox("Jarak", value=True, key="cad_dist")
 
                 fig, ax = plt.subplots(figsize=(8, 6))
 
@@ -270,22 +270,52 @@ else:
                     bearing, distance = calculate_bearing_distance(x1, y1, x2, y2)
                     mid_x, mid_y = (x1 + x2) / 2, (y1 + y2) / 2
 
-                    label_text = ""
-                    if show_cad_bearing and show_cad_distance:
-                        label_text = f"{bearing}\n{distance:.2f}m"
-                    elif show_cad_bearing:
-                        label_text = f"{bearing}"
-                    elif show_cad_distance:
-                        label_text = f"{distance:.2f}m"
+                    # Rotasi teks mengikut garisan
+                    dx = x2 - x1
+                    dy = y2 - y1
+                    angle_deg = np.degrees(np.arctan2(dy, dx))
+                    
+                    if angle_deg > 90:
+                        angle_deg -= 180
+                    elif angle_deg < -90:
+                        angle_deg += 180
 
-                    if label_text:
-                        ax.text(mid_x, mid_y, label_text, fontsize=8, color='#065f46',
-                                ha='center', va='center', bbox=dict(boxstyle='round,pad=0.3', facecolor='#d1fae5', edgecolor='#10b981', alpha=0.85))
+                    # Pengiraan offset serenjang (luar / dalam)
+                    length = np.hypot(dx, dy)
+                    if length > 0:
+                        nx = dy / length
+                        ny = -dx / length
+
+                        vec_to_mid_x = mid_x - center_e
+                        vec_to_mid_y = mid_y - center_n
+                        dot_product = nx * vec_to_mid_x + ny * vec_to_mid_y
+                        
+                        if dot_product < 0:
+                            nx, ny = -nx, -ny
+
+                        offset_dist = 0.8
+                        out_x, out_y = mid_x + nx * offset_dist, mid_y + ny * offset_dist
+                        in_x, in_y = mid_x - nx * offset_dist, mid_y - ny * offset_dist
+                    else:
+                        out_x, out_y = mid_x, mid_y
+                        in_x, in_y = mid_x, mid_y
+
+                    # Bearing di luar & selari garisan (kotak dikecilkan)
+                    if show_cad_bearing:
+                        ax.text(out_x, out_y, f"{bearing}", fontsize=6.5, color='#065f46',
+                                ha='center', va='center', rotation=angle_deg,
+                                bbox=dict(boxstyle='round,pad=0.1', facecolor='#d1fae5', edgecolor='#10b981', alpha=0.85))
+
+                    # Jarak di dalam & selari garisan (kotak dikecilkan)
+                    if show_cad_distance:
+                        ax.text(in_x, in_y, f"{distance:.2f}m", fontsize=6.5, color='#1e40af',
+                                ha='center', va='center', rotation=angle_deg,
+                                bbox=dict(boxstyle='round,pad=0.1', facecolor='#dbeafe', edgecolor='#3b82f6', alpha=0.85))
 
                 if show_cad_polygon:
-                    ax.text(center_e, center_n, f"Luas:\n{area_m2:,.2f} m²", fontsize=10, 
+                    ax.text(center_e, center_n, f"Luas:\n{area_m2:,.2f} m²", fontsize=9, 
                             fontweight='bold', color='#1e40af', ha='center', va='center',
-                            bbox=dict(boxstyle='round,pad=0.5', facecolor='#ffffff', alpha=0.9, edgecolor='#3b82f6'))
+                            bbox=dict(boxstyle='round,pad=0.3', facecolor='#ffffff', alpha=0.9, edgecolor='#3b82f6'))
 
                 ax.set_title("Plot Sempadan Poligon & Pengiraan Luas", fontsize=12, pad=12)
                 ax.set_xlabel("Easting (E)")
@@ -295,8 +325,8 @@ else:
 
                 min_e, max_e = min(e_coords), max(e_coords)
                 min_n, max_n = min(n_coords), max(n_coords)
-                pad_e = max((max_e - min_e) * 0.1, 5)
-                pad_n = max((max_n - min_n) * 0.1, 5)
+                pad_e = max((max_e - min_e) * 0.15, 8)
+                pad_n = max((max_n - min_n) * 0.15, 8)
 
                 ax.set_xlim(min_e - pad_e, max_e + pad_e)
                 ax.set_ylim(min_n - pad_n, max_n + pad_n)
@@ -357,14 +387,14 @@ else:
                     show_sat_points = sc2.checkbox("Stesen", value=True, key="sat_pts")
                     show_sat_bearing = sc3.checkbox("Bearing", value=True, key="sat_bear")
                     show_sat_distance = sc4.checkbox("Jarak", value=True, key="sat_dist")
-                    zoom_level = sc5.slider("Zoom:", min_value=10, max_value=20, value=17, step=1, key="sat_zoom")
+                    zoom_level = sc5.slider("Zoom:", min_value=10, max_value=22, value=20, step=1, key="sat_zoom")
 
                 try:
                     latlon_coords = reproject_coordinates(e_coords, n_coords, epsg_code, swap_axes=swap_axes)
                     center_lat = np.mean([pt[0] for pt in latlon_coords])
                     center_lon = np.mean([pt[1] for pt in latlon_coords])
 
-                    m = folium.Map(location=[center_lat, center_lon], zoom_start=zoom_level, max_zoom=20, tiles=None)
+                    m = folium.Map(location=[center_lat, center_lon], zoom_start=zoom_level, max_zoom=22, tiles=None)
 
                     folium.TileLayer(
                         tiles='https://mt1.google.com/vt/lyrs=s&x={x}&y={y}&z={z}',
@@ -372,7 +402,7 @@ else:
                         name='Google Satellite',
                         overlay=False,
                         control=True,
-                        max_zoom=20
+                        max_zoom=22
                     ).add_to(m)
 
                     folium.TileLayer(
@@ -381,7 +411,7 @@ else:
                         name='Google Hybrid',
                         overlay=False,
                         control=True,
-                        max_zoom=20
+                        max_zoom=22
                     ).add_to(m)
 
                     folium.TileLayer(
@@ -390,14 +420,15 @@ else:
                         name='Google Roadmap',
                         overlay=False,
                         control=True,
-                        max_zoom=20
+                        max_zoom=22
                     ).add_to(m)
 
                     folium.TileLayer(
                         tiles='OpenStreetMap',
                         name='OpenStreetMap',
                         overlay=False,
-                        control=True
+                        control=True,
+                        max_zoom=22
                     ).add_to(m)
 
                     if show_sat_polygon:
@@ -416,7 +447,7 @@ else:
                             stn_label = f"STN {df['STN'].iloc[idx]}" if 'STN' in df.columns else f"STN {idx+1}"
                             folium.CircleMarker(
                                 location=[lat, lon],
-                                radius=5,
+                                radius=4,
                                 color='#ef4444',
                                 fill=True,
                                 fill_color='#ffffff',
@@ -424,8 +455,25 @@ else:
                                 popup=f"{stn_label}<br>Lat: {lat:.6f}<br>Lon: {lon:.6f}"
                             ).add_to(m)
 
+                            # Label Nama Stesen
+                            folium.Marker(
+                                location=[lat, lon],
+                                icon=folium.DivIcon(
+                                    icon_size=(50, 15),
+                                    icon_anchor=(-6, 8),
+                                    html=f'<div style="font-size: 9px; font-weight: bold; color: yellow; text-shadow: 1px 1px 2px black;">{stn_label}</div>'
+                                )
+                            ).add_to(m)
+
                     if show_sat_bearing or show_sat_distance:
                         num_pts = len(e_coords)
+                        
+                        lats = [pt[0] for pt in latlon_coords]
+                        lons = [pt[1] for pt in latlon_coords]
+                        scale = max((max(lats) - min(lats)), (max(lons) - min(lons))) * 0.08
+                        if scale == 0:
+                            scale = 0.00003
+
                         for i in range(num_pts):
                             x1, y1 = e_coords[i], n_coords[i]
                             x2, y2 = e_coords[(i + 1) % num_pts], n_coords[(i + 1) % num_pts]
@@ -437,39 +485,73 @@ else:
                             mid_lat = (lat1 + lat2) / 2
                             mid_lon = (lon1 + lon2) / 2
 
-                            label_text = ""
-                            if show_sat_bearing and show_sat_distance:
-                                label_text = f"{bearing}<br>{distance:.2f}m"
-                            elif show_sat_bearing:
-                                label_text = f"{bearing}"
-                            elif show_sat_distance:
-                                label_text = f"{distance:.2f}m"
+                            # Trigonometri untuk sudut sendeng teks CSS
+                            dx = x2 - x1
+                            dy = y2 - y1
+                            angle_deg = np.degrees(np.arctan2(dy, dx))
+                            
+                            if angle_deg > 90:
+                                angle_deg -= 180
+                            elif angle_deg < -90:
+                                angle_deg += 180
 
-                            if label_text:
-                                html_content = f"""
-                                <div style="
-                                    font-size: 10px;
-                                    font-weight: bold;
-                                    color: #064e3b;
-                                    background-color: rgba(254, 243, 199, 0.9);
-                                    border: 1px solid #059669;
-                                    padding: 2px 4px;
-                                    border-radius: 4px;
-                                    text-align: center;
-                                    white-space: nowrap;
-                                ">{label_text}</div>
-                                """
-                                folium.Marker(
-                                    location=[mid_lat, mid_lon],
-                                    icon=folium.DivIcon(
-                                        icon_size=(100, 20),
-                                        icon_anchor=(50, 10),
-                                        html=html_content
-                                    )
-                                ).add_to(m)
+                            css_angle = -angle_deg
+
+                            # Pengiraan offset serenjang (luar / dalam)
+                            dlat = lat2 - lat1
+                            dlon = lon2 - lon1
+                            length = np.hypot(dlat, dlon)
+
+                            if length > 0:
+                                nlat = dlon / length
+                                nlon = -dlat / length
+
+                                vec_mid_lat = mid_lat - center_lat
+                                vec_mid_lon = mid_lon - center_lon
+                                dot_product = nlat * vec_mid_lat + nlon * vec_mid_lon
+
+                                if dot_product < 0:
+                                    nlat, nlon = -nlat, -nlon
+
+                                out_lat, out_lon = mid_lat + nlat * scale, mid_lon + nlon * scale
+                                in_lat, in_lon = mid_lat - nlat * scale, mid_lon - nlon * scale
+                            else:
+                                out_lat, out_lon = mid_lat, mid_lon
+                                in_lat, in_lon = mid_lat, mid_lon
+
+                            # Papar Bearing & Jarak dalam 1 Kotak Kecil Compact
+                            if show_sat_bearing and show_sat_distance:
+                                label_html = f"{bearing}<br>{distance:.2f}m"
+                            elif show_sat_bearing:
+                                label_html = f"{bearing}"
+                            else:
+                                label_html = f"{distance:.2f}m"
+
+                            html_compact = f"""
+                            <div style="
+                                font-size: 7px; 
+                                font-weight: bold; 
+                                line-height: 1.1;
+                                color: #0f172a; 
+                                background-color: rgba(255, 255, 255, 0.92); 
+                                border: 1px solid #0284c7; 
+                                padding: 1px 2px; 
+                                border-radius: 2px; 
+                                text-align: center; 
+                                white-space: nowrap;
+                                transform: rotate({css_angle}deg);
+                                transform-origin: center center;
+                                box-shadow: 0px 1px 2px rgba(0,0,0,0.3);
+                            ">
+                                {label_html}
+                            </div>
+                            """
+                            folium.Marker(
+                                location=[out_lat, out_lon],
+                                icon=folium.DivIcon(icon_size=(60, 16), icon_anchor=(30, 8), html=html_compact)
+                            ).add_to(m)
 
                     folium.LayerControl().add_to(m)
-
                     st_folium(m, use_container_width=True, height=550)
 
                 except Exception as e:
@@ -500,7 +582,7 @@ else:
                         file_name="peta_poligon_wgs84.geojson",
                         mime="application/json",
                         use_container_width=True
-                    ) # <-- Pembetulan di sini (tambah penutup kurungan)
+                    )
 
                 except Exception as e:
                     col_exp1.error("Gagal menjana GeoJSON (Semak tetapan CRS).")
