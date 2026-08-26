@@ -500,8 +500,8 @@ else:
                         file_name="peta_poligon_wgs84.geojson",
                         mime="application/json",
                         use_container_width=True
+                    ) # <-- Pembetulan di sini (tambah penutup kurungan)
 
-                        
                 except Exception as e:
                     col_exp1.error("Gagal menjana GeoJSON (Semak tetapan CRS).")
 
