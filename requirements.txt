@@ -1,0 +1,8 @@
+streamlit
+pandas
+matplotlib
+numpy
+folium
+streamlit-folium
+ezdxf
+pyproj
